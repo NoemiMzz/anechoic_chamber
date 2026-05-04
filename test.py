@@ -1,1 +1,1 @@
-from anechoic_chamber import AnechoicChamberfrom controller import Controllerfrom vna import VNAimport numpy as npimport socketimport time#try:  ac = AnechoicChamber(110, 170, 1, 100, 'point', 5)positions = ac.generate_positions([-90, 90, 20], 0, 0)ac.scan('WR06', 'test', positions)
+from anechoic_chamber import AnechoicChamberac = AnechoicChamber(110, 170, 1, 100, 'point', 5)positions = ac.generate_positions([-90, 90, 1], 0, 0)ac.scan('WR06', 'test', positions)
