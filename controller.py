@@ -28,6 +28,18 @@ class Controller:
 
         
         
+### PARAMETERS ################################################################
+    
+    ### read the motors status, letters must be checked with the manual ###
+    def status(self, print_status=False):
+        status = []
+        for mot in self.motor.values():
+            status.append(mot.status(print_status))
+        if print_status:
+            print()
+        return status
+
+
 ### POSITION ##################################################################
       
     ### go to position ###          
@@ -36,19 +48,11 @@ class Controller:
         if not len(position_list) == len(self.mot_axis):
             raise Exception("The position list length must match the number of connected motors")
             
-        for ax, pos in zip(self.mot_axis, position_list):
+        for ax, pos in zip(self.mot_axis, position_list):   #set the goal positions for all the motors
             self.socket.send(f"PSET{ax}={pos * self.motor[ax].step_scale}\r".encode())
-
-        mot_go = ''
-        for axis in range(9, 0, -1):
-            print(axis, self.mot_axis)
-            if axis in self.mot_axis:
-                mot_go += '1'
-            else:
-                mot_go += '0'
-        print(mot_go)
-        #self.socket.send(f"MPGO={mot_go}\r".encode())
-        self.socket.send(f"MPGO=000000111\r".encode())
+            
+        for ax in self.mot_axis:   #move all the motors together
+            self.socket.send(f"PGO{ax}\r".encode())
         
         self.wait_stop()
         
@@ -76,6 +80,12 @@ class Controller:
             mot.set_zero_position()
             
             
+    ### bring each motor to the zero position ###
+    def go_home(self):
+        zero_pos = [0] * len(self.mot_axis)
+        self.go_to(zero_pos)
+            
+            
             
 ### MODE ######################################################################
 
@@ -83,12 +93,14 @@ class Controller:
     def abs_to_rel(self):
         for mot in self.motor.values():
             mot.abs_to_rel()
+        print()
      
         
     ### switch all from relative to absolute ###
     def rel_to_abs(self):
         for mot in self.motor.values():
             mot.rel_to_abs()
+        print()
 
 
 

@@ -22,7 +22,7 @@ class Motor:
         #read and save motor code
         self.motor_code = self.read_motor_code()
         
-        if self.motor_code == "MpCanErr\r" or self.motor_code == "NoOWISId\r":
+        if self.motor_code == "MpCanErr" or self.motor_code == "NoOWISId":
             raise RuntimeError(f"CRITICAL: No motor found on axis: {self.axis}")
             
         #compute step scale
@@ -38,9 +38,9 @@ class Motor:
     ### retrieve the motor code ###
     def read_motor_code(self):
         self.socket.send(f"?READOWID{self.axis}=0\r".encode())
-        time.sleep(1)
         motor_code = (self.socket.recv(64)).decode()
-        return motor_code[:11]
+        #reading only the first 8 bites of the motor code because ?READOWID often gets stuck there
+        return motor_code[:8]
 
 
     ### retrives the motor type ###
@@ -61,27 +61,27 @@ class Motor:
             
     ### compute the conversion between motor steps and mm/° ###
     def compute_step_scale(self):
-        if self.motor_code == '41.085.30AD':   #LTM80P_300 (295mm linear actuator)
+        if self.motor_code == '41.085.3':   #LTM80P_300 (295mm linear actuator)
             n = 200   #steps per motor revolution from manual
             h = 1   #spindle pitch from manual
             m = self.read_microstep()
             return n * m / h
-        if self.motor_code == '41.171.006G':   #LIME170_1000 (1000mm linear actuator)
+        if self.motor_code == '41.171.0':   #LIME170_1000 (1000mm linear actuator)
             n = 200   #steps per motor revolution from manual
             h = 5   #spindle pitch from manual
             m = self.read_microstep()
             return n * m / h
-        if self.motor_code == '42.N00.30BV':   #HVM100N_30 (elevation stage)
+        if self.motor_code == '42.N00.3':   #HVM100N_30 (elevation stage)
             n = 200   #steps per motor revolution from manual
             r = 0.5   #travel in mm per motor resolution from manual
             m = self.read_microstep()
             return n * m / r
-        if self.motor_code == '43.201.90AG':   #DMT200N_D90 (z-axis rotator)
+        if self.motor_code == '43.201.9':   #DMT200N_D90 (z-axis rotator)
             #n = 200   #steps per motor revolution from manual
             r = 0.01   #resolution step motor per full step from manual
             m = self.read_microstep()
             return m / r
-        if self.motor_code == '43.100.43AD':   #DMT100_D43 (x-axis rotator)
+        if self.motor_code == '43.100.4':   #DMT100_D43 (x-axis rotator)
             #n = 200   #steps per motor revolution from manual
             r = 0.01   #resolution step motor per full step from manual
             m = self.read_microstep()
@@ -90,43 +90,67 @@ class Motor:
 
     ### initialize maximum velocity according to the manual ###
     def set_safe_velocity(self):
-        if self.motor_code == '41.085.30AD':   #LTM80P_300 (295mm linear actuator)
+        if self.motor_code == '41.085.3':   #LTM80P_300 (295mm linear actuator)
             self.set_max_velocity(10 * self.step_scale)
-        if self.motor_code == '41.171.006G':   #LIME170_1000 (1000mm linear actuator)
+        if self.motor_code == '41.171.0':   #LIME170_1000 (1000mm linear actuator)
             self.set_max_velocity(80 * self.step_scale)
-        if self.motor_code == '42.N00.30BV':   #HVM100N_30 (elevation stage)
+        if self.motor_code == '42.N00.3':   #HVM100N_30 (elevation stage)
             self.set_max_velocity(12 * self.step_scale)
-        if self.motor_code == '43.201.90AG':   #DMT200N_D90 (z-axis rotator)
+        if self.motor_code == '43.201.9':   #DMT200N_D90 (z-axis rotator)
             self.set_max_velocity(30 * self.step_scale)
             self.set_rvel(30 * self.step_scale / 5, 30 * self.step_scale)
-        if self.motor_code == '43.100.43AD':   #DMT100_D43 (x-axis rotator)
+        if self.motor_code == '43.100.4':   #DMT100_D43 (x-axis rotator)
             self.set_max_velocity(24 * self.step_scale)
             self.set_rvel(-24 * self.step_scale / 5, -24 * self.step_scale)
     
     
     ### assign a recognisable name to each motor ###
     def motor_name(self):
-        if self.motor_code == '41.085.30AD':
+        if self.motor_code == '41.085.3':
             return "295mm linear actuator"
-        if self.motor_code == '41.171.006G':
+        if self.motor_code == '41.171.0':
             return "1000m linear actuator"
-        if self.motor_code == '42.N00.30BV':
+        if self.motor_code == '42.N00.3':
             return "elevation stage"
-        if self.motor_code == '43.201.90AG':
+        if self.motor_code == '43.201.9':
             return "z-axis rotator"
-        if self.motor_code == '43.100.43AD':
+        if self.motor_code == '43.100.4':
             return "x-axis rotator"
         
         
-    ### assign a recognisable name to each motor ###
+    ### assign the unit of measure to each motor ###
     def motor_udm(self):
-        linear = {'41.085.30AD', '41.171.006G', '42.N00.30BV'}
-        rotator = {'43.201.90AG', '43.100.43AD'}
+        linear = {'41.085.3', '41.171.0', '42.N00.3'}
+        rotator = {'43.201.9', '43.100.4'}
 
         if self.motor_code in linear:
             return " mm"
         if self.motor_code in rotator:
             return "°"
+    
+    
+    ### read the motor status, letters must be checked with the manual ###
+    def status(self, print_status=False):
+        self.socket.send("?ASTAT\r".encode())
+        status = (self.socket.recv(64)).decode()[self.axis-1]
+        if print_status:
+            if status == 'I':
+                print(f"Status axis {self.axis}: axis is initialized")
+            elif status == 'R':
+                print(f"Status axis {self.axis}: axis initialised and ready")
+            elif status == 'S':
+                print(f"Status axis {self.axis}: axis is positioning in S-curve profile")
+            elif status == 'L':
+                print(f"Status axis {self.axis}: axis has been disabled after approaching a hardware limit switch")
+            elif status == 'B':
+                print(f"Status axis {self.axis}: axis has been stopped after approaching a brake switch")
+            elif status == 'A':
+                print(f"Status axis {self.axis}: axis has been disabled after limit switch error")
+            elif status == 'U':
+                print(f"Status axis {self.axis}: axis is not released")
+            else:
+                print(f"Status axis {self.axis}: {status} (check the P90+ manual)")
+        return status
         
 
 ### POSITION ##################################################################
@@ -173,11 +197,10 @@ class Motor:
     ### wait for the motor to arrive at the set position ###
     def wait_stop(self):
         while True:
-            self.socket.send("?ASTAT\r".encode())
-            status = (self.socket.recv(64)).decode()[self.axis-1]
+            status = self.status()
             if status == "R":
                 break
-            time.sleep(0.01)
+            time.sleep(0.2)
     
     
     ### read the position in step unit from the encoder ###
@@ -292,7 +315,7 @@ class Motor:
     
     ### reach the reference limit switch ###
     def reach_limit_switch(self, print_pos=False):
-        supported_motors = {'43.100.43AD', '43.201.90AG'}   #function for the rotors only
+        supported_motors = {'43.100.4', '43.201.9'}   #function for the rotors only
         if self.motor_code not in supported_motors:
             raise ValueError(f"The {self.motor_name} does not support reaching the limit switch")
 
@@ -304,7 +327,7 @@ class Motor:
 
     ### set the limit switch as zero position ###
     def set_zero_limit_switch(self, print_pos=False):
-        supported_motors = {'43.100.43AD', '43.201.90AG'}   #function for the rotors only
+        supported_motors = {'43.100.4', '43.201.9'}   #function for the rotors only
         if self.motor_code not in supported_motors:
             raise ValueError(f"The {self.motor_name} does not support reaching the limit switch")
         
@@ -324,7 +347,7 @@ class LTM80P_300(Motor):   #295mm linear actuator
                  axis):
         Motor.__init__(self, socket, axis)
         
-        if self.motor_code != '41.085.30AD':
+        if self.motor_code != '41.085.3':
             raise ValueError(f"--- WRONG MOTOR CONNECTED TO AXIS {self.axis} ---\nThe initialized motor model does not match the one connected to axis {self.axis}")
     
 
@@ -338,7 +361,7 @@ class LIME170_1000(Motor):   #1000mm linear actuator
                  axis):
         Motor.__init__(self, socket, axis)
         
-        if self.motor_code != '41.171.006G':
+        if self.motor_code != '41.171.0':
             raise ValueError(f"--- WRONG MOTOR CONNECTED TO AXIS {self.axis} ---\nThe initialized motor model does not match the one connected to axis {self.axis}")
     
 
@@ -352,7 +375,7 @@ class HVM100N_30(Motor):   #elevation stage
                  axis):
         Motor.__init__(self, socket, axis)
         
-        if self.motor_code != '42.N00.30BV':
+        if self.motor_code != '42.N00.3':
             raise ValueError(f"--- WRONG MOTOR CONNECTED TO AXIS {self.axis} ---\nThe initialized motor model does not match the one connected to axis {self.axis}")
 
     
@@ -366,7 +389,7 @@ class DMT200N_D90(Motor):   #z-axis rotator
                  axis):
         Motor.__init__(self, socket, axis)
         
-        if self.motor_code != '43.201.90AG':
+        if self.motor_code != '43.201.9':
             raise ValueError(f"--- WRONG MOTOR CONNECTED TO AXIS {self.axis} ---\nThe initialized motor model does not match the one connected to axis {self.axis}")
 
     
@@ -380,7 +403,7 @@ class DMT100_D43(Motor):   #x-axis rotator
                  axis):
         Motor.__init__(self, socket, axis)
         
-        if self.motor_code != '43.100.43AD':
+        if self.motor_code != '43.100.4':
             raise ValueError(f"--- WRONG MOTOR CONNECTED TO AXIS {self.axis} ---\nThe initialized motor model does not match the one connected to axis {self.axis}")
 
         
