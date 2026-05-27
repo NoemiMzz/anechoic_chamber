@@ -76,6 +76,11 @@ class Motor:
             r = 0.5   #travel in mm per motor resolution from manual
             m = self.read_microstep()
             return n * m / r
+        if self.motor_code == '48.528.1':   #CROSS100 (xy stage)
+            n = 200   #steps per motor revolution from manual
+            h = 1   #spindle pitch from manual
+            m = self.read_microstep()
+            return n * m / h
         if self.motor_code == '43.201.9':   #DMT200N_D90 (z-axis rotator)
             #n = 200   #steps per motor revolution from manual
             r = 0.01   #resolution step motor per full step from manual
@@ -96,6 +101,8 @@ class Motor:
             self.set_max_velocity(80 * self.step_scale)
         if self.motor_code == '42.N00.3':   #HVM100N_30 (elevation stage)
             self.set_max_velocity(12 * self.step_scale)
+        if self.motor_code == '48.528.1':   #CROSS100 (xy stage)
+            self.set_max_velocity(25 * self.step_scale)
         if self.motor_code == '43.201.9':   #DMT200N_D90 (z-axis rotator)
             self.set_max_velocity(30 * self.step_scale)
             self.set_rvel(30 * self.step_scale / 5, 30 * self.step_scale)
@@ -112,6 +119,8 @@ class Motor:
             return "1000m linear actuator"
         if self.motor_code == '42.N00.3':
             return "elevation stage"
+        if self.motor_code == '48.528.1':   #WARNING: there's no way to distinguish the x and y movement
+            return "xy stage"               # it must be manually checked
         if self.motor_code == '43.201.9':
             return "z-axis rotator"
         if self.motor_code == '43.100.4':
@@ -120,7 +129,7 @@ class Motor:
         
     ### assign the unit of measure to each motor ###
     def motor_udm(self):
-        linear = {'41.085.3', '41.171.0', '42.N00.3'}
+        linear = {'41.085.3', '41.171.0', '42.N00.3', '48.528.1'}
         rotator = {'43.201.9', '43.100.4'}
 
         if self.motor_code in linear:
@@ -198,6 +207,8 @@ class Motor:
     def wait_stop(self):
         while True:
             status = self.status()
+            if status == "L":
+                raise Warning(f"Motor on axis {self.axis} is stuck at a limit switch")
             if status == "R":
                 break
             time.sleep(0.2)
@@ -217,7 +228,11 @@ class Motor:
     ### set a new zero encoder position ###
     def set_zero_position(self):
         self.socket.send(f"CRES{self.axis}\r".encode())
-    
+        
+        
+    ### free the motor from a limit switch ###
+    def free_from_switch(self):
+        self.socket.send(f"EFREE{self.axis}\r".encode())
 
 
 ### MODE ######################################################################
@@ -376,6 +391,20 @@ class HVM100N_30(Motor):   #elevation stage
         Motor.__init__(self, socket, axis)
         
         if self.motor_code != '42.N00.3':
+            raise ValueError(f"--- WRONG MOTOR CONNECTED TO AXIS {self.axis} ---\nThe initialized motor model does not match the one connected to axis {self.axis}")
+
+    
+
+#%%
+###############################################################################
+
+class CROSS100(Motor):   #xy stage
+    def __init__(self,
+                 socket,
+                 axis):
+        Motor.__init__(self, socket, axis)
+        
+        if self.motor_code != '48.528.1':
             raise ValueError(f"--- WRONG MOTOR CONNECTED TO AXIS {self.axis} ---\nThe initialized motor model does not match the one connected to axis {self.axis}")
 
     
