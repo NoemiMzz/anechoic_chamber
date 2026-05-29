@@ -260,6 +260,33 @@ class Motor:
         else:
             self.socket.send(f"ABSOL{self.axis}\r".encode())
             print(f"Axis {self.axis} set to ABSOLUTE mode")
+            
+    
+    ### read if trapezoidal (0) or S-curve (1) profile mode ###
+    def read_profile(self, print_profile=False):
+        self.socket.send(f"?PMOD{self.axis}\r".encode())
+        profile = int((self.socket.recv(64)).decode())
+        if print_profile:
+            if profile==0:
+                print(f"Axis {self.axis} set to trapezoidal profile mode")
+            if profile==1:
+                print(f"Axis {self.axis} set to S-curve profile mode")
+        return profile
+         
+    
+    ### change profile mode ###
+    def set_profile(self, profile:str):
+        valid_profiles = {'T', 'S'}
+    
+        if profile not in valid_profiles:
+            raise ValueError(f"Argument 'profile' must be one of {valid_profiles} (received '{profile}')")
+
+        if profile=='T':
+            self.socket.send(f"PMOD{self.axis}=0\r".encode())
+            print(f"Axis {self.axis} set to trapezoidal profile mode")
+        if profile=='S':
+            self.socket.send(f"PMOD{self.axis}=1\r".encode())
+            print(f"Axis {self.axis} set to S-curve profile mode")
         
 
 
