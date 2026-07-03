@@ -1,1 +1,1 @@
-from anechoic_chamber import AnechoicChamberac = AnechoicChamber(110, 170, 1, 100, 'point', 5)positions = ac.generate_positions([-90, 90, 1], 0, 0)ac.scan('WR06', 'test', positions)
+from anechoic_chamber import AnechoicChamberac = AnechoicChamber(75, 110, 1, 100, 'point', 5)#%%pos = ac.generate_positions([-1, 1, 1], 0, 0, 0, 0)ac.scan("test", "log_test", pos)

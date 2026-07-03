@@ -274,6 +274,26 @@ class VNA:
             return 1   #there are already files in this folder
         
         
+    def make_path(self, new_path:str, base_path:str="D:/_ANECHOIC_CHAMBER_/"):
+        if base_path[-1]!="/":
+            base_path+="/"
+        subfolders = new_path.split("/")
+        built_path=""
+        for folder in subfolders:
+            built_path += folder
+            self.send_message(f"MMEM:MDIR '{base_path}{built_path}'\r")
+            built_path += "/"
+ 
+ 
+    ### write raw bytes to a file on the VNA's drive (overwrites if it exists) ###
+    def write_file_on_vna(self, log_path:str, data:str):
+        bytes_data = data.encode()
+        byte_count = str(len(bytes_data))
+        num_digits = str(len(byte_count))
+        header = f"#{num_digits}{byte_count}"
+        
+        self.send_message(f"MMEMory:TRANsfer '{log_path}',{header}{data}\r")
+
         
         
         
