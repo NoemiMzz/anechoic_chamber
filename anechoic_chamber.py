@@ -29,7 +29,8 @@ class AnechoicChamber:
         
 #%%
 ### MEASURE ###################################################################
-        
+      
+    ### perform a sweep ### 
     def sweep(self, folder:str, measure_name:str, position:list):
         
         self.ctrl.go_to(position)
@@ -46,23 +47,23 @@ class AnechoicChamber:
         
         print("...saved!\n\n")
         
-        
+    
+    ### generate file name for each sweep ###
     def generate_file_name(self, measure_name:str):
         name = str(measure_name)
         for n, mot in zip(self.ctrl.mot_axis, self.ctrl.motor.values()):
             name += f"_ax{n}_{mot.read_position()}"   #specify motors position
         return name
     
-    
     def old_file_name(self):
         return self.ctrl.motor[1].read_position()   # <-- TEMPORARY!!
     
     
+    ### generate folder for the whole scan ###
     def folder_name_VNA(self, count:int, path:str, measure_name:str):   #create name with date and measure count
         if path[-1]!="/":
             path+="/"
         return f"{path}{datetime.now().strftime('%Y_%m_%d')}_{measure_name}_{count:03d}"
-    
     
     def make_measure_folder(self, path:str, measure_name:str):   #create folder on VNA
         if path[-1]!="/":
@@ -82,20 +83,20 @@ class AnechoicChamber:
 #%%
 ### LOG FILE ##################################################################
     
-    #write a header with useful information for the log file
+    ### write a header with useful information for the log file ###
     def log_write_header(self, folder:str, measure_name:str):
         self.log_path = f"D:/_ANECHOIC_CHAMBER_/{folder}/log_scan.txt"
         now = datetime.now()
         
         lines = []
         
-        lines.append(f"Date: {now.strftime('%Y-%m-%d')}")
+        lines.append(f"Date: {now.strftime('%Y-%m-%d')}")   #measurement info
         lines.append(f"Start time: {now.strftime('%H:%M:%S')}")
         lines.append(f"Measurement name: {measure_name}\n")
         
-        # at some point add alignment positions here
+        # at some point add alignment positions here <--
         
-        lines.append("--- VNA setup ---")
+        lines.append("--- VNA setup ---")   #VNA info
         lines.append(f"Start frequency (Hz): {self.vna.start_freq}")
         lines.append(f"Stop frequency (Hz): {self.vna.stop_freq}")
         lines.append(f"Frequency resolution (Hz): {self.vna.freq_resolution}")
@@ -103,7 +104,7 @@ class AnechoicChamber:
         lines.append(f"Average mode: {self.vna.read_average_mode()}")
         lines.append(f"Average count: {self.vna.read_average_count()}\n")
         
-        lines.append("--- Motors ---")
+        lines.append("--- Motors ---")   #motors info
         for n, mot in zip(self.ctrl.mot_axis, self.ctrl.motor.values()):
             lines.append(f"Axis {n}: {mot.motor_name()}")
             
@@ -111,7 +112,7 @@ class AnechoicChamber:
         self.vna.write_file_on_vna(self.log_path, self.log_buffer)
 
 
-    #add a line in the log for each sweep, with file name and actual motor position
+    ### add a line in the log for each sweep, with file name and actual motor position ###
     def log_sweep(self, file_name:str):
         
         positions = str(self.ctrl.read_position())
@@ -119,7 +120,8 @@ class AnechoicChamber:
         self.log_buffer += f"{file_name}\t{positions}\n"
         self.vna.write_file_on_vna(self.log_path, self.log_buffer)
         
-        
+    
+    ### write the ending line of the log file, for successful scans ###
     def log_write_end(self):
         now = datetime.now()
         
@@ -140,6 +142,7 @@ class AnechoicChamber:
 #%%
 ### SCAN ######################################################################
 
+    ### generate the whole list of positions to measure during a single scan ###
     def generate_positions(self, *intervals):
         """
         *intervals : scalar or tuple of [start, stop, step]
@@ -169,7 +172,8 @@ class AnechoicChamber:
         print(f"{len(positions)} different poses were generated\n")
         return positions
 
-                  
+    
+    ### perform a scan ###             
     def scan(self, path:str, measure_name:str, positions:list):
         start_time = time.time()
         

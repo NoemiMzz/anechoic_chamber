@@ -1,4 +1,5 @@
 from motor import Motor
+from datetime import datetime
 import socket
 
 #%%
@@ -57,7 +58,7 @@ class Controller:
         self.wait_stop()
         
         
-    ### wait for all motors to arrive at the set position
+    ### wait for all motors to arrive at the set position ###
     def wait_stop(self):
         for mot in self.motor.values():
             mot.wait_stop()
@@ -84,7 +85,26 @@ class Controller:
     def go_home(self):
         zero_pos = [0] * len(self.mot_axis)
         self.go_to(zero_pos)
-            
+        
+        
+    ### save alignment positions ###
+    def save_aligment(self, new_zero=False):
+        pos = self.read_positions()
+        
+        lines = []
+        
+        now = datetime.now()   #print a header with date and time of the alignment
+        lines.append(f"Alignment saved on {now.strftime('%Y-%m-%d')} at {now.strftime('%H:%M:%S')}\n")
+        
+        lines.append("Axis\tMotor name\tPosition\tUnit of measure")   #print the position for each motor
+        for n, mot in enumerate(self.motor.values()):
+            lines.append(f"{mot.axis}\t{mot.motor_name()}\t{pos[n]}\t{mot.motor_udm()}")
+        
+        with open('Blackboard.txt', 'w') as f:
+            f.write('\n'.join(lines))
+        
+        if new_zero:   #if true sets the alignment position as the new zero position
+            self.set_zero_position()
             
             
 ### MODE ######################################################################

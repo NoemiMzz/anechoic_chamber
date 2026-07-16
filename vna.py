@@ -261,7 +261,8 @@ class VNA:
         
         
 ### SAVE DATA #################################################################
-        
+    
+    ### save one sweep on the VNA's drive ###
     def save_data_on_vna(self, file_name, vna_folder_name):
         self.send_message(f"MMEMory:STORe:DATA 'D:/_ANECHOIC_CHAMBER_/{vna_folder_name}/{file_name}.csv','CSV Formatted Data','displayed','DB',-1\r")
         
@@ -273,7 +274,8 @@ class VNA:
         else:
             return 1   #there are already files in this folder
         
-        
+    
+    ### create all the folders leading to a certain path (does nothing if it already exists)###
     def make_path(self, new_path:str, base_path:str="D:/_ANECHOIC_CHAMBER_/"):
         if base_path[-1]!="/":
             base_path+="/"
@@ -285,7 +287,7 @@ class VNA:
             built_path += "/"
  
  
-    ### write raw bytes to a file on the VNA's drive (overwrites if it exists) ###
+    ### write to a file on the VNA's drive (overwrites if it exists) ###
     def write_file_on_vna(self, log_path:str, data:str):
         bytes_data = data.encode()
         byte_count = str(len(bytes_data))

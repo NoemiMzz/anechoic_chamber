@@ -228,11 +228,6 @@ class Motor:
     ### set a new zero encoder position ###
     def set_zero_position(self):
         self.socket.send(f"CRES{self.axis}\r".encode())
-        
-        
-    ### free the motor from a limit switch ###
-    def free_from_switch(self):
-        self.socket.send(f"EFREE{self.axis}\r".encode())
 
 
 ### MODE ######################################################################
