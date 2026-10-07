@@ -76,7 +76,7 @@ class Motor:
             r = 0.5   #travel in mm per motor resolution from manual
             m = self.read_microstep()
             return n * m / r
-        if self.motor_code == '48.528.1':   #CROSS100 (xy stage)
+        if self.motor_code == '48.528.1':   #CROSS_100 (xy wide stage)
             n = 200   #steps per motor revolution from manual
             h = 1   #spindle pitch from manual
             m = self.read_microstep()
@@ -91,6 +91,11 @@ class Motor:
             r = 0.01   #resolution step motor per full step from manual
             m = self.read_microstep()
             return m / r
+        if self.motor_code == '\r':   #C-CROSS_105 (xy compact stage)
+            n = 200   #steps per motor revolution from manual
+            h = 2   #assumed spindle pitch (absent in the manual!!!)
+            m = self.read_microstep()
+            return n * m / h
 
 
     ### initialize maximum velocity according to the manual ###
@@ -101,7 +106,7 @@ class Motor:
             self.set_max_velocity(80 * self.step_scale)
         if self.motor_code == '42.N00.3':   #HVM100N_30 (elevation stage)
             self.set_max_velocity(12 * self.step_scale)
-        if self.motor_code == '48.528.1':   #CROSS100 (xy stage)
+        if self.motor_code == '48.528.1':   #CROSS_100 (xy wide stage)
             self.set_max_velocity(25 * self.step_scale)
         if self.motor_code == '43.201.9':   #DMT200N_D90 (z-axis rotator)
             self.set_max_velocity(30 * self.step_scale)
@@ -109,6 +114,8 @@ class Motor:
         if self.motor_code == '43.100.4':   #DMT100_D43 (x-axis rotator)
             self.set_max_velocity(24 * self.step_scale)
             self.set_rvel(-24 * self.step_scale / 5, -24 * self.step_scale)
+        if self.motor_code == '\r':   #C-CROSS_105 (xy compact stage)
+            self.set_max_velocity(50 * self.step_scale)
     
     
     ### assign a recognisable name to each motor ###
@@ -120,16 +127,18 @@ class Motor:
         if self.motor_code == '42.N00.3':
             return "elevation stage"
         if self.motor_code == '48.528.1':   #WARNING: there's no way to distinguish the x and y movement
-            return "xy stage"               # it must be manually checked
+            return "xy wide stage"                  # it must be manually checked
         if self.motor_code == '43.201.9':
             return "z-axis rotator"
         if self.motor_code == '43.100.4':
             return "x-axis rotator"
+        if self.motor_code == '\r':   #WARNING: there's no way to distinguish the x and y movement
+            return "xy compact stage"         # it must be manually checked
         
         
     ### assign the unit of measure to each motor ###
     def motor_udm(self):
-        linear = {'41.085.3', '41.171.0', '42.N00.3', '48.528.1'}
+        linear = {'41.085.3', '41.171.0', '42.N00.3', '48.528.1', '\r'}
         rotator = {'43.201.9', '43.100.4'}
 
         if self.motor_code in linear:
@@ -420,7 +429,7 @@ class HVM100N_30(Motor):   #elevation stage
 #%%
 ###############################################################################
 
-class CROSS100(Motor):   #xy stage
+class CROSS_100(Motor):   #xy wide stage
     def __init__(self,
                  socket,
                  axis):
@@ -459,6 +468,20 @@ class DMT100_D43(Motor):   #x-axis rotator
 
         
         
+#%%
+###############################################################################
+
+class CCROSS_105(Motor):   #xy wide stage
+    def __init__(self,
+                 socket,
+                 axis):
+        Motor.__init__(self, socket, axis)
+        
+        if self.motor_code != '\r':
+            raise ValueError(f"--- WRONG MOTOR CONNECTED TO AXIS {self.axis} ---\nThe initialized motor model does not match the one connected to axis {self.axis}")
+
+    
+
         
         
         
