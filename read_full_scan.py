@@ -10,6 +10,7 @@ _HEADER_ROW = 5   #row index of "Freq(Hz),..." (pandas skips blank lines when co
 _FOOTER_LINES = 2   #trailing "END" line + blank line
 
 
+
 def build_df(dirpath):
     filenames = [
         os.path.join(dirpath, filename)
@@ -48,3 +49,19 @@ def build_df(dirpath):
         dfs.append(df)
 
     return pd.concat(dfs, ignore_index=True)
+
+
+
+def sort_by_param(df, params, ascending=True):   #sort the combined DataFrame by one or more parameters
+
+    if isinstance(params, str):   #check for wrong column entrance
+        params = [params]
+
+    missing = [p for p in params if p not in df.columns]
+    if missing:
+        raise KeyError(f"Column(s) not found in DataFrame: {missing}")
+
+    return df.sort_values(by=params, ascending=ascending, ignore_index=True)
+
+
+
