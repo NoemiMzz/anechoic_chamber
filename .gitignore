@@ -1,0 +1,15 @@
+# Python
+__pycache__/
+*.pyc
+
+# Jupyter / Spyder
+.ipynb_checkpoints/
+.spyproject/
+
+# macOS
+.DS_Store
+._*
+
+# Measurement data and local outputs
+*.csv
+Blackboard.txt
