@@ -17,9 +17,9 @@ The code drives a **Keysight N5245B PNA-X** vector network analyzer (used with V
 
 ## Requirements
 
-- Python 3
-- `numpy`, `pandas`
-- The control PC must be on the same network as the instruments. Default addresses (change them in the class constructors if needed):
+- Python ≥ 3.9
+- `numpy` (scan control), `pandas` (data reading)
+- Ethernet connection to the instruments. Default addresses (change them in the class constructors if needed):
 
 | Instrument | IP address | Port |
 |---|---|---|
@@ -32,13 +32,13 @@ Motors are recognised automatically from their OWIS ID code, which sets the step
 
 | Model | Description | Unit |
 |---|---|---|
-| LTM80P-300 | 295 mm linear actuator | mm |
-| LIMES 170-1000 | 1000 mm linear actuator | mm |
-| HVM100N-30 | Elevation stage | mm |
-| CROSS-100 | XY wide stage | mm |
-| C-CROSS-105 | XY compact stage | mm |
-| DMT200N-D90 | Z-axis rotator | ° |
-| DMT100-D43 | X-axis rotator | ° |
+| LTM 80P | 295 mm linear actuator | mm |
+| LIMES 170 | 1000 mm linear actuator | mm |
+| HVM 100N | Elevation stage | mm |
+| CROSS 100 | XY wide stage | mm |
+| C-CROSS 105 | XY compact stage | mm |
+| DMT 200N-IMS | Z-axis rotator | ° |
+| DMT 100-IMS | X-axis rotator | ° |
 
 > The two axes of an XY stage report the same ID, so x and y must be checked manually.
 
@@ -57,7 +57,7 @@ ac = AnechoicChamber(start_freq=75, stop_freq=110, freq_resolution=1,
 pos = ac.generate_positions([-1, 1, 1], 0, 0, 0, 0)
 
 # Run the scan: path inside D:/_ANECHOIC_CHAMBER_/ on the VNA, and measurement name
-ac.scan("test", "log_test", pos)
+ac.scan("WR01/test", "first_measure", pos)
 ```
 
 **Parameters**
@@ -67,7 +67,7 @@ ac.scan("test", "log_test", pos)
 - `average_mode`: `'OFF'`, `'point'` or `'sweep'` (`average_count` required unless `'OFF'`)
 - Positions: mm or °, absolute with respect to the encoder zero
 
-On initialisation the VNA is set up with four windows (S11, S12, S21, S22) and all motors are switched to absolute mode. At the end of a scan the motors go back to zero and the VNA returns to continuous sweep.
+On initialisation the VNA is set up with four windows (S11, S12, S21, S22) and all motors are switched to absolute mode. At the end of a scan the motors go back their zero position and the VNA returns to continuous sweep.
 
 ## Output
 
