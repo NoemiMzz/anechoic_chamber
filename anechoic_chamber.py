@@ -66,18 +66,15 @@ class AnechoicChamber:
         return f"{path}{datetime.now().strftime('%Y_%m_%d')}_{measure_name}_{count:03d}"
     
     def make_measure_folder(self, path:str, measure_name:str):   #create folder on VNA
-        if path[-1]!="/":
-            path+="/"
-        self.vna.make_path(path)   #create desired path inside "D:/_ANECHOIC_CHAMBER_/"
-        count = 0
-        while True:
+            if path[-1] != "/":
+                path += "/"
+            self.vna.make_path(path)   #create desired path inside "D:/_ANECHOIC_CHAMBER_/"
+            count = 0
+            while self.vna.find_folder(f"D:/_ANECHOIC_CHAMBER_/{self.folder_name_VNA(count, path, measure_name)}") == 1:
+                count += 1   #add numbering for repeated measures
             folder = self.folder_name_VNA(count, path, measure_name)
-            full_path = f"D:/_ANECHOIC_CHAMBER_/{folder}"
-            if self.vna.find_folder(full_path) == 1:   #add numbering for repeated measures
-                count +=1
-            elif self.vna.find_folder(full_path) == 0:
-                self.vna.make_path(folder)
-                return folder
+            self.vna.make_path(folder)
+            return folder
             
             
 #%%

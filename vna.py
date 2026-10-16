@@ -3,6 +3,7 @@ import socket
 
 #ip_addr = "169.254.217.24"
 #port = 5024
+PROMPT = b"SCPI>"
 
 
 #%%
@@ -13,7 +14,8 @@ class VNA:
                  freq_resolution,
                  IF_bandwidth,
                  ip_addr="169.254.217.24",
-                 port=5024
+                 port=5024,
+                 timeout=30
                  ):
         
         self.start_freq = start_freq
@@ -21,8 +23,10 @@ class VNA:
         self.freq_resolution = freq_resolution
         self.IF_bandwidth = IF_bandwidth
         
-        self.socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        self.socket.connect((ip_addr, port))
+        self.timeout = timeout
+        self.socket = socket.create_connection((ip_addr, port), timeout=timeout)
+        time.sleep(0.5)
+        self._flush()   #discard the welcome banner
         print("Connected to VNA socket!\n")
         
         self.set_bandwidth(start_freq, stop_freq) #GHz
@@ -41,22 +45,48 @@ class VNA:
 
 ###############################################################################
 
+    ### discard anything left in the socket buffer ###
+    def _flush(self):
+        self.socket.setblocking(False)
+        try:
+            while self.socket.recv(4096):
+                pass
+        except (BlockingIOError, socket.error):
+            pass
+        finally:
+            self.socket.settimeout(self.timeout)
+
+    ### read until the SCPI prompt: exactly one full reply ###
+    def _read_until_prompt(self, message=""):
+        data = b""
+        try:
+            while not data.rstrip().endswith(PROMPT):
+                chunk = self.socket.recv(4096)
+                if not chunk:
+                    raise ConnectionError("VNA closed the connection")
+                data += chunk
+        except socket.timeout:
+            raise TimeoutError(f"No prompt from VNA after {message!r}. Received: {data!r}")
+        return data
+
     ### send a command to the VNA ###
     def send_message(self, message, return_answerback=False):
-        self.socket.send(message.encode())
-        time.sleep(0.2)
-        answerback = self.socket.recv(1024)
+        self._flush()   #protects against any leftover data
+        self.socket.sendall(message.encode())
+        answer = self._read_until_prompt(message)
         if return_answerback:
-            return answerback.decode(errors="ignore")
+            return answer.decode(errors="ignore")
     
-    
-    ### interpret VNA responses ###
+    ### interpret VNA responses: last line that isn't the echo/prompt ###
     def read_answer(self, answer):
-        value = answer.strip().splitlines()[1]
-        return value
-        
-        
-        
+        lines = [l.strip() for l in answer.splitlines()]
+        lines = [l for l in lines if l and not l.startswith("SCPI>")]
+        if not lines:
+            raise RuntimeError(f"Unexpected VNA answer: {answer!r}")
+        return lines[-1]
+    
+    
+    
 ### FREQUENCY #################################################################
     
     ### set start and stop frequency for different bands ###
