@@ -85,6 +85,12 @@ class VNA:
             raise RuntimeError(f"Unexpected VNA answer: {answer!r}")
         return lines[-1]
     
+    ### check that a file on the VNA contains the expected text ###
+    def check_file_on_vna(self, path:str, data:str):
+        answer = self.send_message(f"MMEM:TRAN? '{path}'\r", return_answerback=True)
+        last_line = data.strip().splitlines()[-1]
+        return last_line in answer   #True only if the file was saved up to its last line
+    
     
     
 ### FREQUENCY #################################################################

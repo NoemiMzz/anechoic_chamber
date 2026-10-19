@@ -3,6 +3,12 @@ from controller import Controller
 from datetime import datetime
 import numpy as np
 import time
+import os
+
+#folder for temporary/failed logs
+LOCAL_LOG_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "logs")
+os.makedirs(LOCAL_LOG_DIR, exist_ok=True)
+
 
 #%%
 # ANECHOIC CHAMBER
@@ -83,10 +89,10 @@ class AnechoicChamber:
     ### write a header with useful information for the log file ###
     def log_write_header(self, folder:str, measure_name:str):
         self.log_path = f"D:/_ANECHOIC_CHAMBER_/{folder}/log_scan.txt"
+        self.local_log = os.path.join(LOCAL_LOG_DIR, folder.replace("/", "_") + "_log_scan.txt")
         now = datetime.now()
         
         lines = []
-        
         lines.append(f"Date: {now.strftime('%Y-%m-%d')}")   #measurement info
         lines.append(f"Start time: {now.strftime('%H:%M:%S')}")
         lines.append(f"Measurement name: {measure_name}\n")
@@ -104,36 +110,47 @@ class AnechoicChamber:
         lines.append("--- Motors ---")   #motors info
         for n, mot in zip(self.ctrl.mot_axis, self.ctrl.motor.values()):
             lines.append(f"Axis {n}: {mot.motor_name()}")
-            
-        self.log_buffer = "\n".join(lines) + "\n\n"
-        self.vna.write_file_on_vna(self.log_path, self.log_buffer)
+        
+        with open(self.local_log, "w") as f:   #local log, kept until the end of the scan
+            f.write("\n".join(lines) + "\n\n")
+        self.upload_log()   #just the header on the VNA too
 
 
-    ### add a line in the log for each sweep, with file name and actual motor position ###
+    ### copy the whole local log to the VNA ###
+    def upload_log(self):
+        with open(self.local_log, "r") as f:
+            data = f.read()
+        self.vna.write_file_on_vna(self.log_path, data)
+        return data
+
+
+    ### add a line in the local log for each sweep, with file name and actual motor position ###
     def log_sweep(self, file_name:str):
-        
         positions = str(self.ctrl.read_position())
-        
-        self.log_buffer += f"{file_name}\t{positions}\n"
-        self.vna.write_file_on_vna(self.log_path, self.log_buffer)
+        with open(self.local_log, "a") as f:
+            f.write(f"{file_name}\t{positions}\n")
         
     
-    ### write the ending line of the log file, for successful scans ###
+    ### write the ending, save the log on the VNA, delete the local copy if saved ###
     def log_write_end(self):
         now = datetime.now()
         
         lines = []
-        
         lines.append("\n----------------------------------")
         lines.append("--- SCAN COMPLETED SUCCESFULLY ---")
         lines.append("----------------------------------\n")
-        
         lines.append(f"End time: {now.strftime('%H:%M:%S')}")
         
-        log_end = "\n".join(lines)
+        with open(self.local_log, "a") as f:
+            f.write("\n".join(lines))
         
-        self.log_buffer += log_end
-        self.vna.write_file_on_vna(self.log_path, self.log_buffer)
+        data = self.upload_log()
+        if self.vna.check_file_on_vna(self.log_path, data):
+            os.remove(self.local_log)
+            print("Log saved on the VNA, local copy deleted")
+        else:
+            print(f"WARNING: could not verify the log on the VNA. Local copy kept: {self.local_log}")
+
 
 
 #%%
@@ -180,8 +197,16 @@ class AnechoicChamber:
         
         self.log_write_header(folder, measure_name)   #initialize log file
         
-        for pos in positions:
-            self.sweep(folder, measure_name, pos)   #perform measurement in each position
+        try:
+            for pos in positions:
+                self.sweep(folder, measure_name, pos)   #perform measurement in each position
+        except BaseException:   #error or Ctrl+C
+            try:
+                self.upload_log()   #save the partial log on the VNA too
+            except Exception as e:
+                print(f"Could not save the log on the VNA: {e}")
+            print(f"\nScan interrupted. Local log kept in {self.local_log}")
+            raise
             
         self.ctrl.go_home()
         self.ctrl.read_position(print_pos=True)   #go back to the zero position
