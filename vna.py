@@ -33,7 +33,7 @@ class VNA:
         print(f"Bandwidth: {self.read_start_freq()} - {self.read_stop_freq()} GHz")
         
         self.set_IF_bandwidth(IF_bandwidth) #Hz
-        print(f"IF bandwidht: {self.read_IF_bandwidth()} Hz\n")
+        print(f"IF bandwidth: {self.read_IF_bandwidth()} Hz\n")
         
         self.set_freq_points(start_freq, stop_freq, freq_resolution)
         
@@ -230,11 +230,12 @@ class VNA:
         self.send_message("SENS:SWE:MODE HOLD\r")
     
     ### make a single sweep ###
-    def single_sweep(self):
+    def single_sweep(self, timeout=600):
         self.send_message("SENS:SWE:MODE SING\r")
-        while True:
-            if self.read_sweep_mode() == 'HOLD':   #waits for the sweep to be performed
-                break
+        t0 = time.time()
+        while self.read_sweep_mode() != 'HOLD':   #waits for the sweep to be performed
+            if time.time() - t0 > timeout:
+                raise TimeoutError("Sweep did not finish")
             time.sleep(0.2)
         
     ### sweep continuously ###

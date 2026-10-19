@@ -137,7 +137,7 @@ class AnechoicChamber:
         
         lines = []
         lines.append("\n----------------------------------")
-        lines.append("--- SCAN COMPLETED SUCCESFULLY ---")
+        lines.append("--- SCAN COMPLETED SUCCESSFULLY ---")
         lines.append("----------------------------------\n")
         lines.append(f"End time: {now.strftime('%H:%M:%S')}")
         
