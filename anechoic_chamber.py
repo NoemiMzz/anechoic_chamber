@@ -147,9 +147,9 @@ class AnechoicChamber:
         data = self.upload_log()
         if self.vna.check_file_on_vna(self.log_path, data):
             os.remove(self.local_log)
-            print("Log saved on the VNA, local copy deleted")
+            print("\nLog saved on the VNA, local copy deleted")
         else:
-            print(f"WARNING: could not verify the log on the VNA. Local copy kept: {self.local_log}")
+            print(f"WARNING: could not verify the log on the VNA. Local copy kept: {self.local_log}\n")
 
 
 
@@ -205,7 +205,7 @@ class AnechoicChamber:
                 self.upload_log()   #save the partial log on the VNA too
             except Exception as e:
                 print(f"Could not save the log on the VNA: {e}")
-            print(f"\nScan interrupted. Local log kept in {self.local_log}")
+            print(f"\nScan interrupted. Local log kept in {self.local_log}\n")
             raise
             
         self.ctrl.go_home()
